@@ -281,7 +281,12 @@ wire  [7:0] joy0_x,joy0_y,joy1_x,joy1_y;
 
 wire [64:0] RTC;
 
-hps_io #(.STRLEN($size(CONF_STR)>>3), .WIDE(1)) hps_io
+wire        gamma_en;
+wire        gamma_wr;
+wire  [7:0] gamma_wr_addr;
+wire  [7:0] gamma_value;
+
+hps_io #(.STRLEN($size(CONF_STR)>>3), .WIDE(1), .GAMMA(1)) hps_io
 (
 	.clk_sys(clk_sys),
 	.HPS_BUS(HPS_BUS),
@@ -324,7 +329,12 @@ hps_io #(.STRLEN($size(CONF_STR)>>3), .WIDE(1)) hps_io
 	.img_readonly(img_readonly),
 	.img_size(img_size),
 	
-	.RTC(RTC)
+	.RTC(RTC),
+
+	.gamma_en(gamma_en),
+	.gamma_wr(gamma_wr),
+	.gamma_wr_addr(gamma_wr_addr),
+	.gamma_value(gamma_value)
 );
 
 wire       GUN_BTN = status[27];
@@ -462,9 +472,9 @@ main main
 	.ARAM_CE_N(ARAM_CE_N),
 	.ARAM_WE_N(ARAM_WE_N),
 
-	.R(R),
-	.G(G),
-	.B(B),
+	.R(R_in),
+	.G(G_in),
+	.B(B_in),
 
 	.FIELD(FIELD),
 	.INTERLACE(INTERLACE),
@@ -642,10 +652,10 @@ dpram_dif #(BSRAM_BITS,8,BSRAM_BITS-1,16) bsram
 
 ////////////////////////////  VIDEO  ////////////////////////////////////
 
-wire [7:0] R,G,B;
+wire [7:0] R_in,G_in,B_in;
 wire FIELD,INTERLACE;
-wire HSync, HSYNC;
-wire VSync, VSYNC;
+wire HS, HSYNC;
+wire VS, VSYNC;
 wire HBlank_n;
 wire VBlank_n;
 wire HIGH_RES;
@@ -661,8 +671,8 @@ always @(posedge CLK_VIDEO) begin
 	
 	tmp_hres <= tmp_hres | HIGH_RES;
 
-	old_vsync <= VSync;
-	if(~old_vsync & VSync) begin
+	old_vsync <= VS;
+	if(~old_vsync & VS) begin
 		frame_hres <= tmp_hres | ~scandoubler;
 		tmp_hres <= HIGH_RES;
 		interlace <= INTERLACE;
@@ -674,7 +684,7 @@ always @(posedge CLK_VIDEO) begin
 
 	ce_pix <= !pcnt[1:0] & (frame_hres | ~pcnt[2]);
 	
-	if(pcnt==3) {HSync, VSync} <= {HSYNC, VSYNC};
+	if(pcnt==3) {HS, VS} <= {HSYNC, VSYNC};
 end
 
 assign VGA_F1 = interlace & FIELD;
@@ -683,6 +693,32 @@ assign VGA_SL = {~interlace,~interlace}&sl[1:0];
 wire [2:0] scale = status[11:9];
 wire [2:0] sl = scale ? scale - 1'd1 : 3'd0;
 wire       scandoubler = ~interlace && (scale || forced_scandoubler);
+
+wire VS_g, HS_g;
+wire HBlank_g, VBlank_g;
+wire [7:0] R_gamma, G_gamma, B_gamma;
+gamma_corr gamma(
+	.clk_sys(clk_sys),
+	.clk_vid(CLK_VIDEO),
+	.ce_pix(ce_pix),
+
+	.gamma_en(gamma_en),
+	.gamma_wr(gamma_wr),
+	.gamma_wr_addr(gamma_wr_addr),
+	.gamma_value(gamma_value),
+
+	.HSync(HS),
+	.VSync(VS),
+	.HBlank(~HBlank_n),
+	.VBlank(~VBlank_n),
+	.RGB_in({R_in,G_in,B_in}),
+
+	.HSync_out(HS_g),
+	.VSync_out(VS_g),
+	.HBlank_out(HBlank_g),
+	.VBlank_out(VBlank_g),
+	.RGB_out({R_gamma,G_gamma,B_gamma})
+);
 
 video_mixer #(.LINE_LENGTH(520)) video_mixer
 (
@@ -695,11 +731,13 @@ video_mixer #(.LINE_LENGTH(520)) video_mixer
 	.hq2x(scale==1),
 	.mono(0),
 
-	.HBlank(~HBlank_n),
-	.VBlank(~VBlank_n),
-	.R((LG_TARGET && GUN_MODE && (!status[29] | LG_T)) ? {8{LG_TARGET[0]}} : R),
-	.G((LG_TARGET && GUN_MODE && (!status[29] | LG_T)) ? {8{LG_TARGET[1]}} : G),
-	.B((LG_TARGET && GUN_MODE && (!status[29] | LG_T)) ? {8{LG_TARGET[2]}} : B)
+	.HSync(HS_g),
+	.VSync(VS_g),
+	.HBlank(HBlank_g),
+	.VBlank(VBlank_g),
+	.R((LG_TARGET && GUN_MODE && (!status[29] | LG_T)) ? {8{LG_TARGET[0]}} : R_gamma),
+	.G((LG_TARGET && GUN_MODE && (!status[29] | LG_T)) ? {8{LG_TARGET[1]}} : G_gamma),
+	.B((LG_TARGET && GUN_MODE && (!status[29] | LG_T)) ? {8{LG_TARGET[2]}} : B_gamma)
 );
 
 ////////////////////////////  I/O PORTS  ////////////////////////////////

@@ -18,3 +18,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE ioport.sv
 set_global_assignment -name SYSTEMVERILOG_FILE lightgun.sv
 set_global_assignment -name SDC_FILE SNES.sdc
 set_global_assignment -name SYSTEMVERILOG_FILE SNES.sv
+set_global_assignment -name SYSTEMVERILOG_FILE gamma_corr.sv
