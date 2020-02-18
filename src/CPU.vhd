@@ -238,6 +238,7 @@ architecture rtl of SCPU is
 	signal JOYRD_BUSY : std_logic;
 	signal JOY_POLL_RUN: std_logic;
 	signal JOY_VBLANK_OLD: std_logic;
+	signal AUTO_JOY_EN_LATCH: std_logic;
 
 	-- Counter to determine the number of clock cycles since the p65 last accessed a peripheral
 	signal P65_ACCESSED_PERIPHERAL_CNT : unsigned(7 downto 0);
@@ -1271,11 +1272,18 @@ begin
 			JOYRD_BUSY <= '0';
 			AUTO_JOY_STRB <= '0';
 			AUTO_JOY_CLK <= '0';
+			JOY_VBLANK_OLD <= '0';
 		elsif rising_edge(CLK) then
 			if ENABLE = '1' and DOT_CLK_CE = '1' then
 				JOY_POLL_CLK <= JOY_POLL_CLK + 1;
+
+				JOY_VBLANK_OLD <= VBLANK;
+				if JOY_VBLANK_OLD = '0' and VBLANK = '1' then
+					AUTO_JOY_EN_LATCH <= AUTO_JOY_EN;
+				end if;
+
 				if JOY_POLL_CLK(4 downto 0) = 31 then
-					if JOY_POLL_CLK(5) = '1' and VBLANK = '1' and JOY_POLL_RUN = '0' and AUTO_JOY_EN = '1' then
+					if JOY_POLL_CLK(5) = '1' and VBLANK = '1' and JOY_POLL_RUN = '0' and AUTO_JOY_EN_LATCH = '1' then
 						JOY_POLL_RUN <= '1';
 						JOY_POLL_CNT <= (others => '0');
 					elsif JOY_POLL_CLK(5) = '1' and VBLANK = '0' and JOY_POLL_RUN = '1' and JOY_POLL_CNT = 16 then
