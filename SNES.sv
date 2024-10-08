@@ -179,7 +179,7 @@ assign ADC_BUS  = 'Z;
 assign AUDIO_S   = 1;
 assign AUDIO_MIX = status[20:19];
 
-assign LED_USER  = cart_download | spc_download | (status[23] & bk_pending);
+assign LED_USER  = cart_download | ssbin_download | spc_download | (status[23] & bk_pending);
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
 assign BUTTONS   = osd_btn;
@@ -295,10 +295,17 @@ wire reset = RESET | buttons[1] | status[0] | cart_download | spc_download | bk_
 
 `include "build_id.v"
 parameter CONF_STR = {
-	"SNES;UART31250,MIDI;",
+	//"SNES;SS3F800000:100000;UART31250,MIDI;",
+	"SNES;SS3F800000:100000;",
 	"FS0,SFCSMCBINBS ;",
 	"FS1,SPC;",
+	"FC4,BIN,Load SS bin;",
 	"-;",
+	"O[46],Save state to SD,Off,On;",
+	"O[48:47],Savestate Slot,1,2,3,4;",
+	"d6RU,Save state (Alt-F1);",
+	"d6RV,Load state (F1);",
+
 	"OEF,Video Region,Auto,NTSC,PAL;",
 	"O13,ROM Header,Auto,No Header,LoROM,HiROM,ExHiROM;",
 	"-;",
@@ -347,16 +354,38 @@ parameter CONF_STR = {
 	"P3-;",
 	"P3OLM,Initial WRAM,9966(SNES2),00FF(SNES1),55(SD2SNES),FF;",
 	"P3oCD,Initial ARAM,9966(SNES2),00FF(SNES1),55(SD2SNES),FF;",
-
+	"P3-;",
+	"P3O[56],Channel 0,On,Off;",
+	"P3O[57],Channel 1,On,Off;",
+	"P3O[58],Channel 2,On,Off;",
+	"P3O[59],Channel 3,On,Off;",
+	"P3O[60],Channel 4,On,Off;",
+	"P3O[61],Channel 5,On,Off;",
+	"P3O[62],Channel 6,On,Off;",
+	"P3O[63],Channel 7,On,Off;",
 	"-;",
 	"R0,Reset;",
-	"J1,A(SS Fire),B(SS Cursor),X(SS TurboSw),Y(SS Pause),LT(SS Cursor),RT(SS Fire),Select,Start;",
+	"J1,A(SS Fire),B(SS Cursor),X(SS TurboSw),Y(SS Pause),LT(SS Cursor),RT(SS Fire),Select,Start,SaveState;",
+	"I,",
+	"Slot=DPAD|Save/Load=Pause+DPAD,",
+	"Active Slot 1,",
+	"Active Slot 2,",
+	"Active Slot 3,",
+	"Active Slot 4,",
+	"Save to state 1,",
+	"Restore state 1,",
+	"Save to state 2,",
+	"Restore state 2,",
+	"Save to state 3,",
+	"Restore state 3,",
+	"Save to state 4,",
+	"Restore state 4,",
 	"V,v",`BUILD_DATE
 };
 
 wire  [1:0] buttons;
 wire [63:0] status;
-wire [15:0] status_menumask = {en216p, !GUN_MODE, ~turbo_allow, ~gg_available, ~GSU_ACTIVE, ~bk_ena};
+wire [15:0] status_menumask = {ss_allow ,en216p, !GUN_MODE, ~turbo_allow, ~gg_available, ~GSU_ACTIVE, ~bk_ena};
 wire        forced_scandoubler;
 reg  [31:0] sd_lba;
 reg         sd_rd = 0;
@@ -375,7 +404,7 @@ wire [15:0] ioctl_dout;
 wire        ioctl_wr;
 wire  [7:0] ioctl_index;
 
-wire [11:0] joy0,joy1,joy2,joy3,joy4;
+wire [12:0] joy0,joy1,joy2,joy3,joy4;
 wire [24:0] ps2_mouse;
 wire [10:0] ps2_key;
 
@@ -406,8 +435,11 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(1)) hps_io
 
 	.status(status),
 	.status_menumask(status_menumask),
-	.status_in(cart_download ? {status[63:5],1'b0,status[3:0]} : {status[63:32],1'b0,status[30:0]}),
-	.status_set(cart_download | status0_fall),
+	.status_in(cart_download ? {status[63:49], ss_slot, status[46:5],1'b0,status[3:0]} : {status[63:49], ss_slot, status[46:32],1'b0,status[30:0]}),
+	.status_set(cart_download | status0_fall | ss_status),
+
+	.info_req(ss_info_req),
+	.info(ss_info),
 
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
@@ -449,6 +481,7 @@ wire code_index = &ioctl_index;
 wire code_download = ioctl_download & code_index;
 wire cart_download = ioctl_download & ioctl_index[5:0] == 0;
 wire spc_download = ioctl_download & ioctl_index[5:0] == 6'h01;
+wire ssbin_download = ioctl_download & ioctl_index[5:0] == 6'h04;
 
 reg new_vmode;
 always @(posedge clk_sys) begin
@@ -471,9 +504,9 @@ end
 reg        PAL;
 reg  [7:0] rom_type;
 reg [23:0] rom_mask, ram_mask;
+reg  [3:0] ram_size;
 always @(posedge clk_sys) begin
 	reg [3:0] rom_size;
-	reg [3:0] ram_size;
 	reg       rom_region = 0;
 
 	if (cart_download) begin
@@ -556,6 +589,11 @@ wire GSU_ACTIVE;
 wire turbo_allow;
 wire SNES_SYSCLKR_CE,SNES_SYSCLKF_CE;
 
+wire ss_busy, ss_avail;
+wire ss_ddr_ack, ss_ddr_req, ss_ddr_we;
+wire [15:0] ss_ddr_dout, ss_ddr_din;
+wire [21:0] ss_ddr_addr;
+
 reg [15:0] main_audio_l;
 reg [15:0] main_audio_r;
 
@@ -577,6 +615,7 @@ main main
 	.ROM_TYPE(rom_type),
 	.ROM_MASK(rom_mask),
 	.RAM_MASK(ram_mask),
+	.RAM_SIZE(ram_size),
 	.PAL(PAL),
 	.BLEND(BLEND),
 
@@ -679,6 +718,23 @@ main main
 	.MSU_DATA_REQ(msu_data_req),
 	.MSU_ENABLE(msu_enable),
 
+	.SS_SAVE(ss_save),
+	.SS_TOSD(status[46]),
+	.SS_LOAD(ss_load),
+	.SS_SLOT(ss_slot),
+	.SS_BUSY(ss_busy),
+	.SS_AVAIL(ss_avail),
+
+	.SS_DDR_DI(ss_ddr_dout),
+	.SS_DDR_ACK(ss_ddr_ack),
+	.SS_DDR_DO(ss_ddr_din),
+	.SS_DDR_ADDR(ss_ddr_addr),
+	.SS_DDR_WE(ss_ddr_we),
+	.SS_DDR_REQ(ss_ddr_req),
+
+	.CART_DOWNLOAD(cart_download),
+
+	.CH_EN(~status[63:56]), // debug
 	.AUDIO_L(main_audio_l),
 	.AUDIO_R(main_audio_r)
 );
@@ -783,7 +839,11 @@ wire       WRAM_OE_N;
 wire       WRAM_WE_N;
 wire [7:0] WRAM_Q, WRAM_D;
 
-wire[24:0] addr_download = ioctl_addr-10'd512;
+wire[24:0] cart_addr_download = ioctl_addr-10'd512;
+wire[23:0] ssbin_addr_download = { 8'hFF, ioctl_addr[15:0] };
+wire[23:0] addr_download = cart_download ? cart_addr_download[23:0] : ssbin_addr_download;
+
+wire       sdram_download = cart_download | ssbin_download;
 
 reg READ_PULSE;
 always @(posedge clk_sys)
@@ -807,12 +867,12 @@ sdram sdram
 	.init(0), //~clock_locked),
 	.clk(clk_mem),
 	
-	.addr0(cart_download ? addr_download[23:0] : ROM_ADDR),
-	.din0(cart_download ? ioctl_dout : ROM_D),
+	.addr0(sdram_download ? addr_download : ROM_ADDR),
+	.din0(sdram_download ? ioctl_dout : ROM_D),
 	.dout0(ROM_Q),
-	.rd0(~cart_download & (RESET_N ? ~ROM_OE_N : RFSH)),
-	.wr0(cart_download ? ioctl_wr : ~ROM_WE_N),
-	.word0(cart_download | ROM_WORD),
+	.rd0(~sdram_download & (RESET_N ? ~ROM_OE_N : RFSH)),
+	.wr0(sdram_download ? ioctl_wr : ~ROM_WE_N),
+	.word0(sdram_download | ROM_WORD),
 	
 	.addr1(clearing_ram ? {7'b0000000,mem_fill_addr} : {7'b0000000,WRAM_ADDR}),
 	.din1(clearing_ram ? {8'h00,wram_fill_data} : {8'h00,WRAM_D}),
@@ -1136,9 +1196,12 @@ end
 
 reg bk_ena = 0;
 reg old_downloading = 0;
+reg cart_ready = 0;
 always @(posedge clk_sys) begin
 	old_downloading <= cart_download;
 	if(~old_downloading & cart_download) bk_ena <= 0;
+
+	if(old_downloading & ~cart_download) cart_ready <= 1;
 
 	//Save file always mounted in the end of downloading state.
 	if(cart_download && img_mounted && !img_readonly) bk_ena <= |ram_mask;
@@ -1310,17 +1373,89 @@ wire        msu_data_seek;
 wire        msu_data_req;
 wire [31:0] msu_data_base;
 
+wire [31:3] msu_ram_addr;
+wire        msu_ram_req;
+wire        msu_ram_ack;
+wire [63:0] msu_ram_dout;
+
 assign DDRAM_CLK = clk_mem;
 
 msu_data_store msu_data_store
 (
-	.*,
+	.clk_sys(clk_sys),
+
+	.base_addr(msu_data_base),
+
 	.rd_next(msu_data_req),
 	.rd_seek(msu_data_seek),
 	.rd_seek_done(msu_data_ack),
 	.rd_addr(msu_data_addr),
-	.rd_dout(msu_data),
-	.base_addr(msu_data_base)
+
+	.ram_addr(msu_ram_addr),
+	.ram_req(msu_ram_req),
+	.ram_ack(msu_ram_ack),
+	.ram_din(msu_ram_dout),
+
+	.rd_dout(msu_data)
+);
+
+ddram ddram
+(
+	.DDRAM_CLK(DDRAM_CLK),
+
+	.DDRAM_BUSY(DDRAM_BUSY),
+	.DDRAM_BURSTCNT(DDRAM_BURSTCNT),
+	.DDRAM_ADDR(DDRAM_ADDR),
+	.DDRAM_DOUT(DDRAM_DOUT),
+	.DDRAM_DOUT_READY(DDRAM_DOUT_READY),
+	.DDRAM_RD(DDRAM_RD),
+	.DDRAM_DIN(DDRAM_DIN),
+	.DDRAM_BE(DDRAM_BE),
+	.DDRAM_WE(DDRAM_WE),
+
+	.rdaddr({11'b0011_1111_10, ss_ddr_addr[21:1]}), // Save states at $3F80.0000
+	.dout(ss_ddr_dout),
+	.rom_din(ss_ddr_din),
+	.rom_be(2'b11),
+	.rom_we(ss_ddr_we),
+	.rom_req(ss_ddr_req),
+	.rom_ack(ss_ddr_ack),
+
+	.rdaddr2(msu_ram_addr), // MSU is at $2060.0000-3F7F.FFFF
+	.dout2(msu_ram_dout),
+	.rd_req2(msu_ram_req),
+	.rd_ack2(msu_ram_ack)
+);
+
+
+// saving with keyboard/OSD/gamepad
+wire [1:0] ss_slot;
+wire [7:0] ss_info;
+wire ss_save, ss_load, ss_info_req;
+wire ss_status;
+wire ss_allow = ss_avail & cart_ready;
+
+savestate_ui #(.INFO_TIMEOUT_BITS(27)) savestate_ui
+(
+	.clk            (clk_sys       ),
+	.ps2_key        (ps2_key[10:0] ),
+	.allow_ss       (ss_allow      ),
+	.joySS          (joy0[12]      ),
+	.joyRight       (joy0[0]       ),
+	.joyLeft        (joy0[1]       ),
+	.joyDown        (joy0[2]       ),
+	.joyUp          (joy0[3]       ),
+	.joyStart       (joy0[11]      ),
+	.joyRewind      (0             ),
+	.rewindEnable   (0             ),
+	.status_slot    (status[48:47] ),
+	.OSD_saveload   (status[31:30] ),
+	.ss_save        (ss_save       ),
+	.ss_load        (ss_load       ),
+	.ss_info_req    (ss_info_req   ),
+	.ss_info        (ss_info       ),
+	.statusUpdate   (ss_status     ),
+	.selected_slot  (ss_slot       )
 );
 
 endmodule
