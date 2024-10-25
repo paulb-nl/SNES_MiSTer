@@ -591,8 +591,9 @@ wire SNES_SYSCLKR_CE,SNES_SYSCLKF_CE;
 
 wire ss_busy, ss_avail;
 wire ss_ddr_ack, ss_ddr_req, ss_ddr_we;
-wire [15:0] ss_ddr_dout, ss_ddr_din;
-wire [21:0] ss_ddr_addr;
+wire [63:0] ss_ddr_dout, ss_ddr_din;
+wire [21:3] ss_ddr_addr;
+wire [ 7:0] ss_ddr_be;
 
 reg [15:0] main_audio_l;
 reg [15:0] main_audio_r;
@@ -730,6 +731,7 @@ main main
 	.SS_DDR_DO(ss_ddr_din),
 	.SS_DDR_ADDR(ss_ddr_addr),
 	.SS_DDR_WE(ss_ddr_we),
+	.SS_DDR_BE(ss_ddr_be),
 	.SS_DDR_REQ(ss_ddr_req),
 
 	.CART_DOWNLOAD(cart_download),
@@ -1413,10 +1415,10 @@ ddram ddram
 	.DDRAM_BE(DDRAM_BE),
 	.DDRAM_WE(DDRAM_WE),
 
-	.rdaddr({11'b0011_1111_10, ss_ddr_addr[21:1]}), // Save states at $3F80.0000
+	.rdaddr({11'b0011_1111_10, ss_ddr_addr[21:3]}), // Save states at $3F80.0000
 	.dout(ss_ddr_dout),
 	.rom_din(ss_ddr_din),
-	.rom_be(2'b11),
+	.rom_be(ss_ddr_be),
 	.rom_we(ss_ddr_we),
 	.rom_req(ss_ddr_req),
 	.rom_ack(ss_ddr_ack),

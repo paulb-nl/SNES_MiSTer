@@ -120,11 +120,12 @@ module main (
 	output            SS_BUSY,
 	output            SS_AVAIL,
 
-	input      [15:0] SS_DDR_DI,
+	input      [63:0] SS_DDR_DI,
 	input             SS_DDR_ACK,
-	output     [15:0] SS_DDR_DO,
-	output     [21:0] SS_DDR_ADDR,
+	output     [63:0] SS_DDR_DO,
+	output     [21:3] SS_DDR_ADDR,
 	output            SS_DDR_WE,
+	output      [7:0] SS_DDR_BE,
 	output            SS_DDR_REQ,
 
 	input             CART_DOWNLOAD,
@@ -144,7 +145,6 @@ parameter USE_SPC7110 = 1'b1;
 parameter USE_BSX = 1'b1;
 parameter USE_SUFAMI = 1'b1;
 parameter USE_MSU = 1'b1;
-
 
 wire [23:0] CA;
 wire        CPURD_N;
@@ -840,12 +840,6 @@ endgenerate
 
 wire  [7:0] SS_DO;
 wire [23:0] SS_ROM_ADDR;
-wire  [7:0] SS_ROM_DO;
-wire [15:0] SS_ROM_D;
-wire        SS_ROM_CE_N;
-wire        SS_ROM_OE_N;
-wire        SS_ROM_WE_N;
-wire        SS_ROM_WORD;
 
 wire [19:0] SS_EXT_ADDR;
 wire  [7:0] SS_SPC_DI;
@@ -884,17 +878,13 @@ savestates ss
 	.ss_do(SS_DO),
 
 	.rom_addr(SS_ROM_ADDR),
-	.rom_d(SS_ROM_D),
-	.rom_ce_n(SS_ROM_CE_N),
-	.rom_oe_n(SS_ROM_OE_N),
-	.rom_we_n(SS_ROM_WE_N),
-	.rom_word(SS_ROM_WORD),
 
 	.ddr_di(SS_DDR_DI),
 	.ddr_ack(SS_DDR_ACK),
 	.ddr_do(SS_DDR_DO),
 	.ddr_addr(SS_DDR_ADDR),
 	.ddr_we(SS_DDR_WE),
+	.ddr_be(SS_DDR_BE),
 	.ddr_req(SS_DDR_REQ),
 
 	.ext_addr(SS_EXT_ADDR),
@@ -1078,16 +1068,10 @@ always @(*) begin
 		BSRAM_WE_N = PAWR_N;
 	end
 
-
-    if (SS_DO_OVR) begin
-        DI         = SS_DO;
-        ROM_ADDR   = SS_ROM_ADDR;
-        ROM_D      = SS_ROM_D;
-        ROM_CE_N   = SS_ROM_CE_N;
-        ROM_OE_N   = SS_ROM_OE_N;
-        ROM_WE_N   = SS_ROM_WE_N;
-        ROM_WORD   = SS_ROM_WORD;
-    end
+	if (SS_DO_OVR) begin
+		DI         = SS_DO;
+		ROM_ADDR   = SS_ROM_ADDR;
+	end
 end
 
 endmodule

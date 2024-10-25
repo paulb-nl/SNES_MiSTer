@@ -40,10 +40,10 @@ module ddram
 	input         we_req,
 	output reg    we_ack,
 
-	input  [31:1] rdaddr,
-	output [15:0] dout,
-	input  [15:0] rom_din,
-	input   [1:0] rom_be,
+	input  [31:3] rdaddr,
+	output [63:0] dout,
+	input  [63:0] rom_din,
+	input   [7:0] rom_be,
 	input         rom_we,
 	input         rom_req,
 	output reg    rom_ack,
@@ -61,9 +61,10 @@ assign DDRAM_RD       = ram_read;
 assign DDRAM_DIN      = ram_data;
 assign DDRAM_WE       = ram_write;
 
-assign dout  =  ram_q[{rdaddr[2:1],  4'b0000} +:16];
+//assign dout  =  ram_q[{rdaddr[2:1],  4'b0000} +:16];
 //assign dout2 = ram_q2[{rdaddr2[2:1], 4'b0000} +:16]; 
-assign dout2 = ram_q2; 
+assign dout = ram_q;
+assign dout2 = ram_q2;
 
 reg  [7:0] ram_burst;
 reg [63:0] ram_q, next_q, ram_q2, next_q2;
@@ -94,8 +95,8 @@ always @(posedge DDRAM_CLK) begin
 				end
 				else if(rom_req != rom_ack) begin
 					if(rom_we) begin
-						ram_be      <= {6'd0,rom_be}<<{rdaddr[2:1],1'b0};
-						ram_data		<= {4{rom_din}};
+						ram_be      <= rom_be;
+						ram_data	<= rom_din;
 						ram_address <= rdaddr[31:3];
 						ram_write 	<= 1;
 						ram_burst   <= 1;
