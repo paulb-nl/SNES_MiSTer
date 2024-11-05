@@ -589,7 +589,7 @@ wire GSU_ACTIVE;
 wire turbo_allow;
 wire SNES_SYSCLKR_CE,SNES_SYSCLKF_CE;
 
-wire ss_busy, ss_avail;
+wire ss_avail;
 wire ss_ddr_ack, ss_ddr_req, ss_ddr_we;
 wire [63:0] ss_ddr_dout, ss_ddr_din;
 wire [21:3] ss_ddr_addr;
@@ -723,7 +723,6 @@ main main
 	.SS_TOSD(status[46]),
 	.SS_LOAD(ss_load),
 	.SS_SLOT(ss_slot),
-	.SS_BUSY(ss_busy),
 	.SS_AVAIL(ss_avail),
 
 	.SS_DDR_DI(ss_ddr_dout),
@@ -733,8 +732,6 @@ main main
 	.SS_DDR_WE(ss_ddr_we),
 	.SS_DDR_BE(ss_ddr_be),
 	.SS_DDR_REQ(ss_ddr_req),
-
-	.CART_DOWNLOAD(cart_download),
 
 	.CH_EN(~status[63:56]), // debug
 	.AUDIO_L(main_audio_l),
