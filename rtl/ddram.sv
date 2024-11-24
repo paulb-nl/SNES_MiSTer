@@ -35,6 +35,8 @@ module ddram
 	output  [7:0] DDRAM_BE,
 	output        DDRAM_WE,
 
+	input         cache_rst,
+
 	input  [31:1] wraddr,
 	input  [15:0] din,
 	input         we_req,
@@ -77,7 +79,12 @@ reg  [7:0] ram_be = 0;
 reg [1:0]  state  = 0;
 reg        ch = 0;
 
+reg [1:0]  cache_valid;
+
 always @(posedge DDRAM_CLK) begin
+	if (cache_rst) begin
+		cache_valid <= 2'b00;
+	end
 
 	if(!DDRAM_BUSY) begin
 		ram_write <= 0;
@@ -103,8 +110,8 @@ always @(posedge DDRAM_CLK) begin
 						ch          <= 0;
 						state       <= 1;
 					end
-					else if(cache_addr == rdaddr[31:3]) rom_ack <= rom_req;
-					else if((cache_addr+1'd1) == rdaddr[31:3]) begin
+					else if(cache_valid[0] & (cache_addr == rdaddr[31:3])) rom_ack <= rom_req;
+					else if(cache_valid[0] & ((cache_addr+1'd1) == rdaddr[31:3])) begin
 						rom_ack     <= rom_req;
 						ram_q       <= next_q;
 						cache_addr  <= rdaddr[31:3];
@@ -124,8 +131,8 @@ always @(posedge DDRAM_CLK) begin
 					end 
 				end
 				else if(rd_req2 != rd_ack2) begin
-					if(cache_addr2 == rdaddr2[31:3]) rd_ack2 <= rd_req2;
-					else if((cache_addr2+1'd1) == rdaddr2[31:3]) begin
+					if(cache_valid[1] & (cache_addr2 == rdaddr2[31:3])) rd_ack2 <= rd_req2;
+					else if(cache_valid[1] & ((cache_addr2+1'd1) == rdaddr2[31:3])) begin
 						rd_ack2     <= rd_req2;
 						ram_q2      <= next_q2;
 						cache_addr2 <= rdaddr2[31:3];
@@ -146,10 +153,7 @@ always @(posedge DDRAM_CLK) begin
 				end 
 
 			1: begin
-					cache_addr  <= '1;
-					cache_addr2 <= '1;
-					cache_addr[3]  <= 0;
-					cache_addr2[3] <= 0;
+					cache_valid <= 2'b00;
 					if(ch) we_ack <= we_req;
 					else rom_ack <= rom_req;
 					state <= 0;
@@ -170,10 +174,12 @@ always @(posedge DDRAM_CLK) begin
 			3: if(DDRAM_DOUT_READY) begin
 					if (~ch) begin
 						next_q <= DDRAM_DOUT;
+						cache_valid[0] <= 1'b1;
 					end
 					else begin
 						next_q2 <= DDRAM_DOUT;
-					end 
+						cache_valid[1] <= 1'b1;
+					end
 					state <= 0;
 				end
 		endcase
