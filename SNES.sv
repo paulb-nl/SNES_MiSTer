@@ -842,7 +842,7 @@ wire [7:0] WRAM_Q, WRAM_D;
 
 wire[24:0] cart_addr_download = ioctl_addr-10'd512;
 wire[23:0] ssbin_addr_download = { 8'hFF, ioctl_addr[15:0] };
-wire[23:0] addr_download = cart_download ? cart_addr_download[23:0] : ssbin_addr_download;
+wire[23:0] addr_download = ssbin_download ? ssbin_addr_download : cart_addr_download[23:0];
 
 wire       sdram_download = cart_download | ssbin_download;
 

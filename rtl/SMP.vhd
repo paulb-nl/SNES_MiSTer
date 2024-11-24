@@ -491,9 +491,11 @@ begin
 					when others => null;
 				end case;
 
-			else
-				if REG_SET = '1' then REG_SET <= '0'; end if;
-				if SS_REG_SET = '1' then SS_REG_SET <= '0'; end if;
+			elsif SS_REG_SET = '1' then
+				SS_REG_SET <= '0';
+				REG_SET <= '0';
+			elsif RST_N = '1' and REG_SET = '1' then
+				REG_SET <= '0';
 			end if;
 		end if;
 	end process;
