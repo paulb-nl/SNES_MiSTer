@@ -297,15 +297,14 @@ wire reset = RESET | buttons[1] | status[0] | cart_download | spc_download | bk_
 parameter CONF_STR = {
 	//"SNES;SS3F800000:100000;UART31250,MIDI;",
 	"SNES;SS3F800000:100000;",
-	"FS0,SFCSMCBINBS ;",
-	"FS1,SPC;",
-	"FC4,BIN,Load SS bin;",
+	"FS1,SFCSMCBINBS ;",
+	"FS4,SPC;",
 	"-;",
 	"O[46],Save state to SD,Off,On;",
 	"O[48:47],Savestate Slot,1,2,3,4;",
 	"d6RU,Save state (Alt-F1);",
 	"d6RV,Load state (F1);",
-
+	"-;",
 	"OEF,Video Region,Auto,NTSC,PAL;",
 	"O13,ROM Header,Auto,No Header,LoROM,HiROM,ExHiROM;",
 	"-;",
@@ -479,9 +478,12 @@ wire [2:0] LHRom_type = status[3:1];
 
 wire code_index = &ioctl_index;
 wire code_download = ioctl_download & code_index;
-wire cart_download = ioctl_download & ioctl_index[5:0] == 0;
-wire spc_download = ioctl_download & ioctl_index[5:0] == 6'h01;
-wire ssbin_download = ioctl_download & ioctl_index[5:0] == 6'h04;
+wire cart_download = ioctl_download & ((ioctl_index[5:0] == 6'h01) | (ioctl_index[7:0] == 0));
+wire spc_download = ioctl_download & ioctl_index[5:0] == 6'h04;
+wire msu_audio_download = ioctl_download & ioctl_index[5:0] == 6'h02;
+wire msu_data_download  = ioctl_download & ioctl_index[5:0] == 6'h03;
+wire ssbin_download = ioctl_download & ((ioctl_index[5:0] == 6'h00) & (ioctl_index[7:6] == 2'd1));
+
 
 reg new_vmode;
 always @(posedge clk_sys) begin
@@ -1278,8 +1280,6 @@ end
 ///////////////////////////  MSU1  ///////////////////////////////////
 
 wire msu_enable;
-wire msu_audio_download = ioctl_download & ioctl_index[5:0] == 6'h02;
-wire msu_data_download  = ioctl_download & ioctl_index[5:0] == 6'h03;
 
 // EXT bus is used to communicate with the HPS for MSU functionality
 wire [35:0] EXT_BUS;
