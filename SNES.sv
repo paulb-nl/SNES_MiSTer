@@ -291,7 +291,7 @@ wire reset = RESET | buttons[1] | status[0] | cart_download | spc_download | bk_
 // 0         1         2         3          4         5         6
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXXXXXXX
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX  XXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -300,8 +300,8 @@ parameter CONF_STR = {
 	"FS1,SFCSMCBINBS ;",
 	"FS4,SPC;",
 	"-;",
-	"O[46],Save state to SD,Off,On;",
-	"O[48:47],Savestate Slot,1,2,3,4;",
+	"O[50],Save state to SD,Off,On;",
+	"O[52:51],Savestate Slot,1,2,3,4;",
 	"d6RU,Save state (Alt-F1);",
 	"d6RV,Load state (F1);",
 	"-;",
@@ -349,7 +349,7 @@ parameter CONF_STR = {
 	"D1P3OI,SuperFX Speed,Normal,Turbo;",
 	"D1P3oE,SuperFX FastROM,Yes,No;",
 	"D3P3O4,CPU Speed,Normal,Turbo;",
-	"P3OV,Sufami Cart swapping,No,Yes;",
+	"P3O[47],Sufami Cart swapping,No,Yes;",
 	"P3-;",
 	"P3OLM,Initial WRAM,9966(SNES2),00FF(SNES1),55(SD2SNES),FF;",
 	"P3oCD,Initial ARAM,9966(SNES2),00FF(SNES1),55(SD2SNES),FF;",
@@ -470,7 +470,7 @@ wire [1:0] GUN_MODE = status[26:25];
 wire       GUN_TYPE = status[34];
 wire       GSU_TURBO = status[18];
 wire       GSU_FASTROM = ~status[46];
-wire       SUFAMI_SWAP = status[31];
+wire       SUFAMI_SWAP = status[47];
 wire       BLEND = ~status[16];
 wire [1:0] mouse_mode = status[6:5];
 wire       joy_swap = status[7] | piano;
@@ -722,7 +722,7 @@ main main
 	.MSU_ENABLE(msu_enable),
 
 	.SS_SAVE(ss_save),
-	.SS_TOSD(status[46]),
+	.SS_TOSD(status[50]),
 	.SS_LOAD(ss_load),
 	.SS_SLOT(ss_slot),
 	.SS_AVAIL(ss_avail),
@@ -1452,7 +1452,7 @@ savestate_ui #(.INFO_TIMEOUT_BITS(27)) savestate_ui
 	.joyStart       (joy0[11]      ),
 	.joyRewind      (0             ),
 	.rewindEnable   (0             ),
-	.status_slot    (status[48:47] ),
+	.status_slot    (status[52:51] ),
 	.OSD_saveload   (status[31:30] ),
 	.ss_save        (ss_save       ),
 	.ss_load        (ss_load       ),
