@@ -434,7 +434,7 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(1)) hps_io
 
 	.status(status),
 	.status_menumask(status_menumask),
-	.status_in(cart_download ? {status[63:49], ss_slot, status[46:5],1'b0,status[3:0]} : {status[63:49], ss_slot, status[46:32],1'b0,status[30:0]}),
+	.status_in(cart_download ? {status[63:53], ss_slot, status[50:5],1'b0,status[3:0]} : {status[63:53], ss_slot, status[50:32],1'b0,status[30:0]}),
 	.status_set(cart_download | status0_fall | ss_status),
 
 	.info_req(ss_info_req),
