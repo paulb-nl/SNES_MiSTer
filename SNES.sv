@@ -295,8 +295,7 @@ wire reset = RESET | buttons[1] | status[0] | cart_download | spc_download | bk_
 
 `include "build_id.v"
 parameter CONF_STR = {
-	//"SNES;SS3F800000:100000;UART31250,MIDI;",
-	"SNES;SS3F800000:100000;",
+	"SNES;SS3F800000:100000,UART31250,MIDI;",
 	"FS1,SFCSMCBINBS ;",
 	"FS4,SPC;",
 	"-;",
