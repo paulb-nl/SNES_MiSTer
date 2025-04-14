@@ -67,6 +67,7 @@ signal P65_NMI_N				: std_logic;
 signal P65_IRQ_N				: std_logic;
 signal P65_RST_N				: std_logic;
 signal P65_EN					: std_logic;
+signal P65_CE					: std_logic;
 signal P65_VDA					: std_logic;
 signal P65_VPA					: std_logic;
 signal P65_VPB					: std_logic;
@@ -301,6 +302,7 @@ EN <= ENABLE and CLK_CE;
 -- 65C816
 P65_RST_N <= not SA1RST and RST_N;
 P65_EN <= not SA1WAIT and ENABLE;
+P65_CE <= SA1_EN and CLK_CE;
 P65_NMI_N <= not SA1_NMI;
 P65_IRQ_N <= not SA1_IRQ;
 
@@ -308,7 +310,7 @@ P65C816: entity work.P65C816
 port map (
 	CLK         => CLK,
 	RST_N       => P65_RST_N,
-	CE       	=> SA1_EN and CLK_CE,
+	CE       	=> P65_CE,
 	WE          => P65_R_WN,
 	D_IN     	=> P65_DI,
 	D_OUT    	=> P65_DO,
@@ -324,11 +326,6 @@ port map (
 
 P65_WR <= not P65_R_WN and (P65_VPA or P65_VDA);
 P65_RD <=     P65_R_WN and (P65_VPA or P65_VDA);
-
-SA1_P65_A	 <= P65_A;
-SA1_P65_DO	 <= P65_DO;
-SA1_P65_RD_N <= not (P65_RD and CLK_CE and P65_EN);
-SA1_P65_WR_N <= not (P65_WR and CLK_CE and P65_EN);
 
 --BUS control
 SNES_ROM_ACCESS <= '1' when (SNES_A(22) = '0' and SNES_A(15) = '1') or (SNES_A(23 downto 22) = "11") else '0';
@@ -1649,5 +1646,10 @@ SS_P65_DO <= "0000000" & SS_CMD;
 
 SS_SA1_ROMSEL <= SA1_ROM_EN;
 SS_SNS_ROMSEL <= SNES_ROM_SEL;
+
+SA1_P65_A	 <= P65_A;
+SA1_P65_DO	 <= P65_DO;
+SA1_P65_RD_N <= not (P65_RD and P65_CE and P65_EN);
+SA1_P65_WR_N <= not (P65_WR and P65_CE and P65_EN);
 	
 end rtl;
