@@ -127,7 +127,6 @@ module main (
 	output      [7:0] SS_DDR_BE,
 	output            SS_DDR_REQ,
 
-	input       [7:0] CH_EN,
 	output     [15:0] AUDIO_L,
 	output     [15:0] AUDIO_R
 );
@@ -265,7 +264,6 @@ SNES SNES
 	
 	.turbo(TURBO),
 
-	.CH_EN(CH_EN),
 	.audio_l(AUDIO_L),
 	.audio_r(AUDIO_R)
 );

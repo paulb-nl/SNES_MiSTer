@@ -109,7 +109,6 @@ entity SNES is
 		DBG_BG_EN	: in std_logic_vector(4 downto 0);
 		DBG_CPU_EN	: in std_logic;
 
-		CH_EN		: in std_logic_vector(7 downto 0);
 		AUDIO_L		: out std_logic_vector(15 downto 0);
 		AUDIO_R		: out std_logic_vector(15 downto 0)
 	);
@@ -435,7 +434,6 @@ begin
 		SS_DI			=> SS_DI,
 		SS_DO			=> SS_DSP_DO,
 
-		CH_EN 		=> CH_EN,
 		AUDIO_L		=> AUDIO_L,
 		AUDIO_R		=> AUDIO_R
 	);

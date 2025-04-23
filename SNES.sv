@@ -353,15 +353,7 @@ parameter CONF_STR = {
 	"P3-;",
 	"P3OLM,Initial WRAM,9966(SNES2),00FF(SNES1),55(SD2SNES),FF;",
 	"P3oCD,Initial ARAM,9966(SNES2),00FF(SNES1),55(SD2SNES),FF;",
-	"P3-;",
-	"P3O[56],Channel 0,On,Off;",
-	"P3O[57],Channel 1,On,Off;",
-	"P3O[58],Channel 2,On,Off;",
-	"P3O[59],Channel 3,On,Off;",
-	"P3O[60],Channel 4,On,Off;",
-	"P3O[61],Channel 5,On,Off;",
-	"P3O[62],Channel 6,On,Off;",
-	"P3O[63],Channel 7,On,Off;",
+
 	"-;",
 	"R0,Reset;",
 	"J1,A(SS Fire),B(SS Cursor),X(SS TurboSw),Y(SS Pause),LT(SS Cursor),RT(SS Fire),Select,Start,SaveState;",
@@ -735,7 +727,6 @@ main main
 	.SS_DDR_BE(ss_ddr_be),
 	.SS_DDR_REQ(ss_ddr_req),
 
-	.CH_EN(~status[63:56]), // debug
 	.AUDIO_L(main_audio_l),
 	.AUDIO_R(main_audio_r)
 );

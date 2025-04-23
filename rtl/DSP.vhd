@@ -42,7 +42,6 @@ entity DSP is
 		SS_DI		: in std_logic_vector(7 downto 0);
 		SS_DO		: out std_logic_vector(7 downto 0);
 
-		CH_EN       : in std_logic_vector(7 downto 0); -- debug
 		AUDIO_L		: out std_logic_vector(15 downto 0);
 		AUDIO_R		: out std_logic_vector(15 downto 0);
 		SND_RDY		: out std_logic
@@ -951,8 +950,7 @@ begin
 							end if;
 						end if;
 						
-						--if RST_FLG = '1' or (TBRRHDR(1 downto 0) = "01" and KON_CNT(INS.V) /= 5) then
-						if CH_EN(INS.V) = '0' or RST_FLG = '1' or (TBRRHDR(1 downto 0) = "01" and KON_CNT(INS.V) /= 5) then
+						if RST_FLG = '1' or (TBRRHDR(1 downto 0) = "01" and KON_CNT(INS.V) /= 5) then
 							ENV_MODE(INS.V) <= EM_RELEASE;
 							ENV(INS.V) <= (others => '0');
 						end if;
@@ -1076,8 +1074,7 @@ begin
 								
 					when VS_KON =>
 						if EVEN_SAMPLE = '1' then
-							--WKON <= WKON and (not TKON);
-							WKON <= WKON and (not TKON) and CH_EN;
+							WKON <= WKON and (not TKON);
 						end if;
 						
 					when VS_KOFF =>
