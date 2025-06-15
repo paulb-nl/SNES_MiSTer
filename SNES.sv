@@ -816,15 +816,29 @@ sdram sdram
 	.wr0(cart_download ? ioctl_wr : ~ROM_WE_N),
 	.word0(cart_download | ROM_WORD),
 	
-	.addr1(clearing_ram ? {7'b0000000,mem_fill_addr} : {7'b0000000,WRAM_ADDR}),
-	.din1(clearing_ram ? {8'h00,wram_fill_data} : {8'h00,WRAM_D}),
-	.dout1(sdr_dout1),
-	.rd1(clearing_ram ? 1'b0 : ~WRAM_CE_N & ~WRAM_OE_N & READ_PULSE),
-	.wr1(clearing_ram ? mem_fill_we : ~WRAM_CE_N & ~WRAM_WE_N & SNES_SYSCLKF_CE),
-	.word1(0)
+	//.addr1(clearing_ram ? {7'b0000000,mem_fill_addr} : {7'b0000000,WRAM_ADDR}),
+	//.din1(clearing_ram ? {8'h00,wram_fill_data} : {8'h00,WRAM_D}),
+	//.dout1(sdr_dout1),
+	//.rd1(clearing_ram ? 1'b0 : ~WRAM_CE_N & ~WRAM_OE_N & READ_PULSE),
+	//.wr1(clearing_ram ? mem_fill_we : ~WRAM_CE_N & ~WRAM_WE_N & SNES_SYSCLKF_CE),
+	//.word1(0)
 );
 
-assign WRAM_Q = sdr_dout1[7:0];
+//assign WRAM_Q = sdr_dout1[7:0];
+
+dpram #(17)	wram
+(
+	.clock(clk_sys),
+	.address_a(WRAM_ADDR),
+	.data_a(WRAM_D),
+	.wren_a(~WRAM_CE_N & ~WRAM_WE_N),
+	.q_a(WRAM_Q),
+
+	// clear the RAM on loading
+	.address_b(mem_fill_addr[16:0]),
+	.data_b(wram_fill_data),
+	.wren_b(mem_fill_we)
+);
 
 wire [15:0] VRAM1_ADDR;
 wire        VRAM1_WE_N;
@@ -876,7 +890,8 @@ dpram_dif #(16,8,15,16) aram
 	.wren_b(spc_download ? ioctl_wr : mem_fill_we)
 );
 
-localparam  BSRAM_BITS = 18; // 256Kbyte
+localparam  BSRAM_BITS = 17; // 1Mbits
+//localparam  BSRAM_BITS = 18; // 256Kbyte
 wire [19:0] BSRAM_ADDR;
 wire        BSRAM_CE_N;
 wire        BSRAM_WE_N;
